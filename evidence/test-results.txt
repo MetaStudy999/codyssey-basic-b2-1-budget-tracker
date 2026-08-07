@@ -1,0 +1,23 @@
+test_all_command_help_paths_work (test_budget_app.BudgetCliTests.test_all_command_help_paths_work) ... ok
+test_cli_category_budget_summary (test_budget_app.BudgetCliTests.test_cli_category_budget_summary) ... ok
+test_cli_search_update_delete (test_budget_app.BudgetCliTests.test_cli_search_update_delete) ... ok
+test_csv_cli_round_trip (test_budget_app.BudgetCliTests.test_csv_cli_round_trip) ... ok
+test_error_is_nonzero_without_traceback_and_has_hint (test_budget_app.BudgetCliTests.test_error_is_nonzero_without_traceback_and_has_hint) ... ok
+test_export_requires_source_filter (test_budget_app.BudgetCliTests.test_export_requires_source_filter) ... ok
+test_help_works (test_budget_app.BudgetCliTests.test_help_works) ... ok
+test_interactive_add_persists_across_processes (test_budget_app.BudgetCliTests.test_interactive_add_persists_across_processes) ... ok
+test_invalid_add_is_nonzero_without_traceback (test_budget_app.BudgetCliTests.test_invalid_add_is_nonzero_without_traceback) ... ok
+test_add_list_newest_first_and_generator (test_budget_app.BudgetServiceTests.test_add_list_newest_first_and_generator) ... ok
+test_broken_import_rolls_back_all_rows (test_budget_app.BudgetServiceTests.test_broken_import_rolls_back_all_rows) ... ok
+test_budget_summary_usage_and_overrun (test_budget_app.BudgetServiceTests.test_budget_summary_usage_and_overrun) ... ok
+test_category_in_use_guard (test_budget_app.BudgetServiceTests.test_category_in_use_guard) ... ok
+test_export_import_round_trip_utf8_schema (test_budget_app.BudgetServiceTests.test_export_import_round_trip_utf8_schema) ... ok
+test_initializes_three_persistent_files_and_defaults (test_budget_app.BudgetServiceTests.test_initializes_three_persistent_files_and_defaults) ... ok
+test_search_filters_and_streams (test_budget_app.BudgetServiceTests.test_search_filters_and_streams) ... ok
+test_transaction_validation (test_budget_app.BudgetServiceTests.test_transaction_validation) ... ok
+test_update_delete_and_missing_id (test_budget_app.BudgetServiceTests.test_update_delete_and_missing_id) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 18.176s
+
+OK

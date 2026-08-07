@@ -1,0 +1,43 @@
+$ python -m budget_app --data-dir /tmp/b2-1-data category add --name study
+[저장 완료] category=study
+
+$ printf "..." | python -m budget_app --data-dir /tmp/b2-1-data add
+날짜(YYYY-MM-DD): 타입(income/expense): 카테고리: 금액(양수): 메모(선택): 태그(쉼표로 구분, 없으면 엔터): [저장 완료] id=TX-000001
+
+$ printf "..." | python -m budget_app --data-dir /tmp/b2-1-data add
+날짜(YYYY-MM-DD): 타입(income/expense): 카테고리: 금액(양수): 메모(선택): 태그(쉼표로 구분, 없으면 엔터): [저장 완료] id=TX-000002
+
+$ python -m budget_app --data-dir /tmp/b2-1-data list --limit 10
+TX-000001 | 2026-08-08 | expense | study | 12000 | AI 교재 | tags=learning,book
+TX-000002 | 2026-08-07 | income | salary | 50000 | 용돈
+
+$ python -m budget_app --data-dir /tmp/b2-1-data search --category study --tag learning
+TX-000001 | 2026-08-08 | expense | study | 12000 | AI 교재 | tags=learning,book
+
+$ python -m budget_app --data-dir /tmp/b2-1-data budget set --month 2026-08 --amount 10000
+[저장 완료] 2026-08 예산 10000원
+
+$ python -m budget_app --data-dir /tmp/b2-1-data summary --month 2026-08 --top 3
+총 수입: 50000원
+총 지출: 12000원
+잔액: 38000원
+예산: 10000원 (사용률 120.0%)
+[경고] 월 예산을 초과했습니다.
+지출 TOP 3
+1) study 12000원
+
+$ python -m budget_app --data-dir /tmp/b2-1-data export --out evidence/sample-export.csv --month 2026-08
+[완료] evidence/sample-export.csv (2 records)
+
+$ python -m budget_app --data-dir /tmp/b2-1-data update --id TX-000001 --amount 13000
+[수정 완료] id=TX-000001
+
+$ python -m budget_app --data-dir /tmp/b2-1-data delete --id TX-999999
+[오류] 거래 id를 찾을 수 없습니다: TX-999999
+[힌트] list 또는 search로 id를 확인해 주세요.
+exit_code=2
+
+$ ls data files
+budgets.jsonl
+categories.jsonl
+transactions.jsonl

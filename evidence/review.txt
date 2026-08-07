@@ -1,0 +1,16 @@
+G4 STRUCTURAL REVIEW
+modules>=3: PASS
+classes>=2: PASS
+generator_present: PASS
+decorator_applied: PASS
+typed_functions_present: PASS
+three_store_names: PASS
+atomic_replace: PASS
+csv_schema: PASS
+modules: services.py, storage.py, models.py, exceptions.py, decorators.py, cli.py
+classes: services.py:BudgetService, storage.py:DataPaths, storage.py:TransactionRepository, storage.py:CategoryStore, storage.py:BudgetStore, models.py:Transaction, exceptions.py:BudgetError
+yield files: services.py, storage.py
+decorated functions: storage.py:_write_jsonl_atomic, storage.py:_sort_key, models.py:from_mapping, decorators.py:wrapper, cli.py:main
+annotated function count: 49
+BLOCKER: 0
+MAJOR: 0
