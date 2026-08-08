@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "mission": "B2-1",
+  "repository": "MetaStudy999/codyssey-basic-b2-1-budget-tracker",
+  "updated_at": "2026-08-09T06:41:00+09:00",
+  "source": "bootstrap-from-repository-evidence",
+  "workcell_status": "COMPLETE",
+  "current_gate": "G8_MERGE",
+  "gates": {
+    "G1_SOURCE": "PASS",
+    "G2_BUILD": "PASS",
+    "G3_TEST": "PASS",
+    "G4_REVIEW": "PASS",
+    "G5_RUNTIME": "PASS",
+    "G6_EVIDENCE": "PASS",
+    "G7_LEARN": "PASS",
+    "G8_MERGE": "PASS"
+  },
+  "note": "Initial telemetry snapshot. Update this file whenever a G1-G8 gate changes."
+}
