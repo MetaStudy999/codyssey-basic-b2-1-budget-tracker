@@ -47,6 +47,46 @@ Reference Build가 완료되어도 Phase C에서 실제 명령·오류 경로·�
 15. Runtime 정상/오류/재실행 검증
 16. Evidence 후 CLEAR
 
-## 상태
+## Reference Build 준비 결과
 
-**Reference Build 진행 중 / Mission 상태는 ⬜ NOT STARTED 유지 / Runtime 미시작**
+- [x] Source/Evaluation 분석
+- [x] Python package/entry point
+- [x] models/repositories/services/cli/utils/errors 모듈 분리
+- [x] Transaction/Budget 모델과 type hints
+- [x] JSONL 3파일 persistence 구조
+- [x] add/list/search/update/delete
+- [x] summary/budget/category
+- [x] import/export 고정 CSV 스키마
+- [x] reverse JSONL generator streaming
+- [x] atomic rewrite (`fsync` + `os.replace`)
+- [x] 공통 오류 decorator + nonzero error contract
+- [x] unit test 기준본
+- [x] `environment/verify.sh`
+- [x] `environment/reset.sh`
+- [x] Root/Reference README
+- [x] Beginner Guide Step 01~10
+- [x] Requirement Mapping / Evaluation Q&A / Evidence Guide
+- [x] B2-1 공식 미션에는 실제 Secret이 필요하지 않음을 확인
+- [x] 실제 Runtime 결과를 PASS로 가장하지 않음
+
+## Phase C에서 확인할 것
+
+- [ ] Python 3.10+ 실제 환경
+- [ ] Reference `verify.sh` 실제 실행 결과 0 FAIL
+- [ ] add/list/search 실제 CLI
+- [ ] update/delete 정상/오류
+- [ ] summary/budget/category 실제 CLI
+- [ ] import/export 실제 CSV
+- [ ] 프로그램 재실행 후 3파일 persistence
+- [ ] 대표 오류 stacktrace 없음 + exit != 0
+- [ ] 실제 Evidence
+- [ ] 사용자 자기 말 Evaluation 설명
+- [ ] `✅ B2-1 CLEAR`
+
+## 현재 판정
+
+**Reference Build: 기준본 준비 완료**
+
+**Mission 상태: ⬜ NOT STARTED 유지 / Runtime 미시작 / CLEAR 아님**
+
+다음 Phase A 작업은 B2-2 Reference Build입니다.
