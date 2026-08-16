@@ -217,12 +217,12 @@ class BudgetService:
             for row_no, row in enumerate(reader, start=2):
                 try:
                     self.add_transaction(
-                        date=row.get("date", ""),
-                        type=row.get("type", ""),
-                        category=row.get("category", ""),
-                        amount=row.get("amount", ""),
-                        memo=row.get("memo", ""),
-                        tags=row.get("tags", ""),
+                        date=row.get("date") or "",
+                        type=row.get("type") or "",
+                        category=row.get("category") or "",
+                        amount=row.get("amount") or "",
+                        memo=row.get("memo") or "",
+                        tags=row.get("tags") or "",
                     )
                     result.imported += 1
                 except AppError as exc:
