@@ -1,0 +1,4 @@
+# B2-1 — Ubuntu 24.04 mission-specific APT packages
+# Python project libraries belong in the repository-local .venv.
+python3
+python3-venv
