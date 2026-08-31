@@ -6,7 +6,7 @@
 
 - Training Round: **R01 — CLEAR**
 - Mission: **B2-1**
-- Runtime Mission 상태: **🟡 ACTIVE — MAC-V Runtime PASS / Evaluation Gate 진행 전**
+- Runtime Mission 상태: **🟡 ACTIVE — MAC-V Runtime 기능 PASS / 최신 주석 반영 HEAD 재검증 필요**
 - Phase A Reference 상태: **CORE READY**
 - Actual Evidence: [`evidence/2026-08-31-mac-v-runtime.md`](evidence/2026-08-31-mac-v-runtime.md)
 
@@ -30,6 +30,7 @@
 - [x] 공통 오류 decorator 실제 적용
 - [x] `REFERENCE-STATUS.md`
 - [x] Phase A 자체감사 BLOCKER/MAJOR 0
+- [x] 입문자가 코드 흐름을 따라갈 수 있는 상세 한글 주석/docstring
 
 ## C. 저장 정책
 
@@ -140,6 +141,7 @@
 - [x] `handle_cli_errors` decorator 분리 및 실제 `main` 적용
 - [x] dataclass/Repository/Service/CLI 함수에 type hints
 - [x] Evaluation 설명 기준 답안
+- [x] generator/decorator/atomic rewrite 등에 입문자용 상세 코드 설명 추가
 - [ ] Phase C에서 사용자가 실제 코드 위치를 근거로 자기 말 설명
 
 ## L. Verify / Documentation / Evidence
@@ -153,11 +155,13 @@
 - [x] `evidence/README.md`
 - [x] `environment/verify.sh`를 AST parse + unit tests + CLI/help + README/구조 검사로 보강
 - [x] verify가 bytecode/cache를 남기지 않도록 설계
-- [x] 실제 환경에서 `verify.sh` 0 FAIL — 46 PASS / 0 FAIL
+- [x] **입문자 주석 반영 전** 실제 환경 `verify.sh` — 46 PASS / 0 FAIL
 - [x] 실제 정상 CLI Evidence
 - [x] 실제 오류 CLI Evidence
 - [x] 실제 persistence Evidence
 - [x] 실제 import/export Evidence
+- [x] 입문자 Python 코드 주석/docstring 반영
+- [ ] **최신 주석 반영 HEAD에서 `verify.sh` 0 FAIL 재확인**
 
 ## M. Evaluation 확장성
 
@@ -170,7 +174,7 @@
 
 - [ ] 공식 Mission 누락 없음 최종 확인
 - [ ] 공식 Evaluation 누락 없음 최종 확인
-- [x] 실제 Reference verify/test PASS
+- [ ] **최신 HEAD Reference verify/test PASS**
 - [x] 정상 Runtime 완료
 - [x] 오류 Runtime 완료
 - [x] 실제 재실행 persistence 확인
