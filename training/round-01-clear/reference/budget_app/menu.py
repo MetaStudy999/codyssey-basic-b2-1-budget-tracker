@@ -12,14 +12,16 @@
 - 거래 추가: 종류와 카테고리를 방향키로 선택한 뒤 실제 JSONL에 저장
 - 거래 목록: 최근 거래를 최신순 컬러 표로 확인
 - 거래 검색: 날짜·종류·카테고리·메모·태그 조건으로 검색
+- 거래 수정: 최근 거래를 방향키로 고른 뒤 필요한 값을 수정
+- 거래 삭제: 최근 거래를 방향키로 고르고 안전 확인 후 삭제
 
 중요한 설계 원칙:
 
 - 기존 CLI는 그대로 유지합니다.
-- 저장/검증/검색 규칙을 이 파일에서 다시 만들지 않습니다.
+- 저장/검증/검색/수정/삭제 규칙을 이 파일에서 다시 만들지 않습니다.
 - 실제 업무 규칙은 기존 ``BudgetService``를 호출합니다.
 - 터미널의 어려운 키 입력 처리는 ``terminal.py``에 맡깁니다.
-- 검색 결과가 많아도 화면용 최대 건수만 제너레이터에서 순서대로 받습니다.
+- 거래가 많아도 화면용 최대 건수만 제너레이터에서 순서대로 받습니다.
 """
 
 from __future__ import annotations
@@ -48,6 +50,7 @@ from .terminal import (
 # Service의 generator를 끝까지 list로 만들지 않고 필요한 건수까지만 읽습니다.
 LIST_DISPLAY_LIMIT = 20
 SEARCH_DISPLAY_LIMIT = 50
+SELECT_TRANSACTION_LIMIT = 20
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,8 +83,8 @@ MAIN_MENU_ITEMS = (
     MenuItem("add", "거래 추가", "수입 또는 지출 내역을 새로 기록합니다."),
     MenuItem("list", "거래 목록", "최근 거래 내역을 확인합니다."),
     MenuItem("search", "거래 검색", "날짜·카테고리·종류·메모·태그로 찾습니다."),
-    MenuItem("update", "거래 수정", "저장된 거래의 내용을 고칩니다."),
-    MenuItem("delete", "거래 삭제", "필요 없는 거래를 삭제합니다."),
+    MenuItem("update", "거래 수정", "저장된 거래를 방향키로 골라 내용을 고칩니다."),
+    MenuItem("delete", "거래 삭제", "저장된 거래를 방향키로 골라 안전하게 삭제합니다."),
     MenuItem("summary", "월별 요약", "수입·지출·잔액과 지출 순위를 봅니다."),
     MenuItem("budget", "예산 관리", "월 예산을 설정하고 사용률을 확인합니다."),
     MenuItem("category", "카테고리 관리", "카테고리를 추가·조회·삭제합니다."),
@@ -121,7 +124,7 @@ def _footer() -> None:
 
     print()
     print(paint("↑ ↓ 이동   → / Enter 선택   Esc / Q 종료", Ansi.DIM))
-    print(paint("현재 단계: 거래 추가 · 목록 · 검색 연결", Ansi.YELLOW))
+    print(paint("현재 단계: 거래 추가 · 목록 · 검색 · 수정 · 삭제 연결", Ansi.YELLOW))
 
 
 def draw_main_menu(selected_index: int, data_dir: Path) -> None:
@@ -161,7 +164,7 @@ def wait_for_return() -> None:
 
 
 def show_help() -> None:
-    """입문자가 방향키를 바로 이해할 수 있도록 도움말을 보여 줍니다."""
+    """입문자가 방향키와 안전한 삭제 동작을 바로 이해하도록 도움말을 보여 줍니다."""
 
     clear_screen()
     print(paint("B2-1 메뉴 도움말", Ansi.CYAN, Ansi.BOLD))
@@ -174,6 +177,10 @@ def show_help() -> None:
     print("  Esc      이전 화면 또는 취소")
     print("  Q        메인 메뉴에서는 프로그램 종료")
     print()
+    print("  거래 수정/삭제에서는 ID를 외워 입력하지 않습니다.")
+    print("  최근 거래 목록에서 ↑ ↓ 방향키로 원하는 거래를 고릅니다.")
+    print("  삭제 확인 화면의 기본 선택은 '취소'이므로 Enter를 잘못 눌러도 바로 삭제되지 않습니다.")
+    print()
     print(paint("명령어를 외우지 않아도 방향키 중심으로 사용할 수 있습니다.", Ansi.GREEN))
     wait_for_return()
 
@@ -183,17 +190,22 @@ def choose_option(
     choices: Sequence[Choice],
     *,
     description: str = "",
+    initial_index: int = 0,
 ) -> str | None:
     """방향키로 항목 하나를 선택하고 그 항목의 실제 값을 반환합니다.
 
     - Enter/→: 선택 항목의 ``value`` 반환
     - ←/Esc/Q: 선택을 취소하고 ``None`` 반환
+
+    ``initial_index``는 처음 강조할 항목입니다.
+    삭제처럼 실수 방지가 중요한 화면에서는 '취소'를 0번에 놓고
+    기본값을 0으로 두면 Enter를 잘못 눌러도 안전하게 취소됩니다.
     """
 
     if not choices:
         return None
 
-    selected_index = 0
+    selected_index = max(0, min(initial_index, len(choices) - 1))
 
     while True:
         clear_screen()
@@ -220,14 +232,18 @@ def choose_option(
         print(paint("↑ ↓ 이동   → / Enter 선택   ← / Esc 취소", Ansi.DIM))
 
         key = read_key()
+
         if key == Key.UP:
             selected_index = move_selection(selected_index, -1, len(choices))
             continue
+
         if key == Key.DOWN:
             selected_index = move_selection(selected_index, 1, len(choices))
             continue
+
         if key in {Key.LEFT, Key.ESC, Key.QUIT}:
             return None
+
         if key in {Key.RIGHT, Key.ENTER}:
             return choices[selected_index].value
 
@@ -248,17 +264,57 @@ def ask_text(
 
     if optional:
         print(paint("선택 항목입니다. 필요 없으면 Enter만 누르세요.", Ansi.DIM))
+
     if default is not None:
         print(paint(f"기본값: {default} (그대로 쓰려면 Enter)", Ansi.DIM))
 
     print()
 
-    # 메뉴에서는 커서를 숨기지만 텍스트 입력 중에는 입력 위치가 보여야 합니다.
     with visible_cursor():
         value = input(f"{prompt}: ").strip()
 
     if not value and default is not None:
         return default
+
+    return value
+
+
+def ask_edit_text(
+    title: str,
+    prompt: str,
+    current: str,
+    *,
+    allow_clear: bool = False,
+) -> str:
+    """수정 화면에서 현재 값을 보여 주고 새 값을 입력받습니다.
+
+    그냥 Enter를 누르면 기존 값을 유지합니다.
+
+    메모·태그처럼 빈 값이 허용되는 항목은 ``allow_clear=True``로 호출합니다.
+    이 경우 하이픈 한 글자(``-``)를 입력하면 값을 비울 수 있습니다.
+    """
+
+    clear_screen()
+    _header()
+    print(paint(title, Ansi.CYAN, Ansi.BOLD))
+    print()
+    print(f"현재 값: {current or '(없음)'}")
+    print(paint("변경하지 않으려면 Enter만 누르세요.", Ansi.DIM))
+
+    if allow_clear:
+        print(paint("내용을 모두 지우려면 - 한 글자를 입력하세요.", Ansi.DIM))
+
+    print()
+
+    with visible_cursor():
+        value = input(f"{prompt}: ").strip()
+
+    if not value:
+        return current
+
+    if allow_clear and value == "-":
+        return ""
+
     return value
 
 
@@ -272,6 +328,18 @@ def show_notice(title: str, message: str, *, color: str = Ansi.YELLOW) -> None:
     wait_for_return()
 
 
+def _friendly_tui_hint(error: AppError) -> str:
+    """CLI 용어가 낯선 오류에는 TUI용 추가 설명을 제공합니다."""
+
+    if error.message == "--from 날짜가 --to 날짜보다 늦습니다.":
+        return (
+            "시작일(--from)은 종료일(--to)과 같거나 더 이른 날짜여야 합니다.\n"
+            "예: 시작일 2026-08-01 / 종료일 2026-08-31"
+        )
+
+    return error.hint
+
+
 def show_app_error(error: AppError) -> None:
     """Service에서 발생한 예상 가능한 오류를 입문자용 형식으로 보여 줍니다."""
 
@@ -279,7 +347,7 @@ def show_app_error(error: AppError) -> None:
     print(paint("입력 내용을 확인해 주세요", Ansi.RED, Ansi.BOLD))
     print()
     print(paint("[오류]", Ansi.RED, Ansi.BOLD), error.message)
-    print(paint("[힌트]", Ansi.YELLOW, Ansi.BOLD), error.hint)
+    print(paint("[힌트]", Ansi.YELLOW, Ansi.BOLD), _friendly_tui_hint(error))
     wait_for_return()
 
 
@@ -294,11 +362,7 @@ def _shorten(text: str, width: int) -> str:
 
 
 def _take_transactions(source: Iterable[Transaction], limit: int) -> list[Transaction]:
-    """제너레이터에서 화면에 필요한 거래만 순서대로 가져옵니다.
-
-    ``list(source)``처럼 전체 파일을 끝까지 읽지 않는 것이 핵심입니다.
-    데이터가 매우 많아도 TUI 화면에 필요한 건수까지만 메모리에 올립니다.
-    """
+    """제너레이터에서 화면에 필요한 거래만 순서대로 가져옵니다."""
 
     result: list[Transaction] = []
 
@@ -315,6 +379,37 @@ def _amount_text(transaction: Transaction) -> str:
 
     sign = "+" if transaction.type == "income" else "-"
     return f"{sign}{transaction.amount:,}원"
+
+
+def _transaction_details(transaction: Transaction) -> str:
+    """거래 한 건의 모든 주요 값을 확인 화면용 여러 줄 문자열로 만듭니다."""
+
+    tags = ",".join(transaction.tags) if transaction.tags else "(없음)"
+
+    return "\n".join(
+        (
+            f"ID         : {transaction.id}",
+            f"날짜       : {transaction.date}",
+            f"종류       : {transaction.type}",
+            f"카테고리   : {transaction.category}",
+            f"금액       : {transaction.amount:,}원",
+            f"메모       : {transaction.memo or '(없음)'}",
+            f"태그       : {tags}",
+        )
+    )
+
+
+def _transaction_choice_label(transaction: Transaction) -> str:
+    """거래 선택 메뉴 한 줄을 짧고 구분하기 쉬운 형태로 만듭니다."""
+
+    type_label = "수입" if transaction.type == "income" else "지출"
+    memo = _shorten(transaction.memo or "-", 16)
+
+    return (
+        f"{transaction.date} | {type_label:<2} | "
+        f"{_shorten(transaction.category, 10):<10} | "
+        f"{transaction.amount:>10,}원 | {memo}"
+    )
 
 
 def show_transactions_table(
@@ -338,13 +433,13 @@ def show_transactions_table(
         wait_for_return()
         return
 
-    # ANSI 색상을 넣기 전에 각 칸의 폭을 먼저 맞추면 정렬이 덜 흔들립니다.
     print(paint("─" * 94, Ansi.DIM))
     print(f"{'ID':<8} {'날짜':<10} {'type':<8} {'카테고리':<14} {'금액':>14}  메모 / 태그")
     print(paint("─" * 94, Ansi.DIM))
 
     for transaction in transactions:
         memo = transaction.memo or "-"
+
         if transaction.tags:
             tags = ",".join(transaction.tags)
             memo = f"{memo} [{tags}]"
@@ -357,7 +452,6 @@ def show_transactions_table(
         category_cell = _shorten(transaction.category, 14)
         memo_cell = _shorten(memo, 30)
 
-        # 금액과 거래 종류에만 색을 넣어 정보가 과하게 번쩍이지 않도록 합니다.
         print(
             f"{id_cell:<8} "
             f"{transaction.date:<10} "
@@ -372,11 +466,56 @@ def show_transactions_table(
     wait_for_return()
 
 
+def select_transaction(service: BudgetService, title: str) -> Transaction | None:
+    """최근 거래 중 한 건을 방향키로 선택합니다.
+
+    사용자가 거래 ID를 외워 직접 입력하지 않도록 하는 것이 목적입니다.
+    """
+
+    try:
+        transactions = _take_transactions(
+            service.list_transactions(SELECT_TRANSACTION_LIMIT),
+            SELECT_TRANSACTION_LIMIT,
+        )
+    except AppError as error:
+        show_app_error(error)
+        return None
+
+    if not transactions:
+        show_notice(
+            title,
+            "선택할 거래가 없습니다.\n먼저 '거래 추가'에서 거래를 한 건 이상 저장해 주세요.",
+        )
+        return None
+
+    choices = tuple(
+        Choice(_transaction_choice_label(transaction), transaction.id)
+        for transaction in transactions
+    )
+
+    selected_id = choose_option(
+        title,
+        choices,
+        description=(
+            f"최근 거래 최대 {SELECT_TRANSACTION_LIMIT}건입니다.\n"
+            "↑ ↓ 로 거래를 고른 뒤 Enter를 누르세요."
+        ),
+    )
+
+    if selected_id is None:
+        return None
+
+    for transaction in transactions:
+        if transaction.id == selected_id:
+            return transaction
+
+    return None
+
+
 def run_add_transaction(service: BudgetService) -> None:
     """방향키와 쉬운 입력 화면으로 새 거래 한 건을 저장합니다."""
 
     today = calendar_date.today().isoformat()
-
     date_value = ask_text("1/6 · 날짜", "날짜(YYYY-MM-DD)", default=today)
 
     type_value = choose_option(
@@ -387,6 +526,7 @@ def run_add_transaction(service: BudgetService) -> None:
         ),
         description="↑ ↓ 방향키로 선택한 뒤 Enter를 누르세요.",
     )
+
     if type_value is None:
         show_notice("거래 추가 취소", "거래를 저장하지 않고 메인 메뉴로 돌아갑니다.")
         return
@@ -397,6 +537,7 @@ def run_add_transaction(service: BudgetService) -> None:
         tuple(Choice(name, name) for name in categories),
         description="등록되어 있는 카테고리 중 하나를 선택하세요.",
     )
+
     if category_value is None:
         show_notice("거래 추가 취소", "거래를 저장하지 않고 메인 메뉴로 돌아갑니다.")
         return
@@ -441,24 +582,13 @@ def run_add_transaction(service: BudgetService) -> None:
 
     show_notice(
         "거래 저장 완료",
-        (
-            f"새 거래가 정상적으로 저장되었습니다.\n\n"
-            f"ID         : {transaction.id}\n"
-            f"날짜       : {transaction.date}\n"
-            f"종류       : {transaction.type}\n"
-            f"카테고리   : {transaction.category}\n"
-            f"금액       : {transaction.amount:,}원"
-        ),
+        "새 거래가 정상적으로 저장되었습니다.\n\n" + _transaction_details(transaction),
         color=Ansi.GREEN,
     )
 
 
 def run_list_transactions(service: BudgetService) -> None:
-    """최근 거래를 최신순으로 최대 20건 보여 줍니다.
-
-    실제 파일 탐색 순서는 ``BudgetService.list_transactions()``에 맡깁니다.
-    TUI는 반환된 거래를 읽기 좋은 표로 보여 주는 역할만 합니다.
-    """
+    """최근 거래를 최신순으로 최대 20건 보여 줍니다."""
 
     try:
         transactions = _take_transactions(
@@ -477,22 +607,10 @@ def run_list_transactions(service: BudgetService) -> None:
 
 
 def run_search_transactions(service: BudgetService) -> None:
-    """입문자용 단계별 화면으로 검색 조건을 받고 결과를 표시합니다.
+    """입문자용 단계별 화면으로 검색 조건을 받고 결과를 표시합니다."""
 
-    모든 조건은 선택 사항입니다. 아무 조건도 넣지 않으면 최신 거래부터
-    화면용 최대 건수까지 보여 줍니다.
-    """
-
-    date_from = ask_text(
-        "1/6 · 검색 시작일",
-        "시작일(YYYY-MM-DD)",
-        optional=True,
-    )
-    date_to = ask_text(
-        "2/6 · 검색 종료일",
-        "종료일(YYYY-MM-DD)",
-        optional=True,
-    )
+    date_from = ask_text("1/6 · 검색 시작일", "시작일(YYYY-MM-DD)", optional=True)
+    date_to = ask_text("2/6 · 검색 종료일", "종료일(YYYY-MM-DD)", optional=True)
 
     type_value = choose_option(
         "3/6 · 거래 종류",
@@ -503,6 +621,7 @@ def run_search_transactions(service: BudgetService) -> None:
         ),
         description="종류를 제한하지 않으려면 '전체'를 선택하세요.",
     )
+
     if type_value is None:
         show_notice("검색 취소", "검색하지 않고 메인 메뉴로 돌아갑니다.")
         return
@@ -515,20 +634,13 @@ def run_search_transactions(service: BudgetService) -> None:
         tuple(category_choices),
         description="카테고리를 제한하지 않으려면 '전체'를 선택하세요.",
     )
+
     if category_value is None:
         show_notice("검색 취소", "검색하지 않고 메인 메뉴로 돌아갑니다.")
         return
 
-    query_value = ask_text(
-        "5/6 · 메모 검색어",
-        "메모에 포함된 단어",
-        optional=True,
-    )
-    tag_value = ask_text(
-        "6/6 · 태그",
-        "태그 하나",
-        optional=True,
-    )
+    query_value = ask_text("5/6 · 메모 검색어", "메모에 포함된 단어", optional=True)
+    tag_value = ask_text("6/6 · 태그", "태그 하나", optional=True)
 
     criteria_lines = (
         f"시작일     : {date_from or '전체'}",
@@ -544,6 +656,7 @@ def run_search_transactions(service: BudgetService) -> None:
         (Choice("검색", "search"), Choice("취소", "cancel")),
         description="\n".join(criteria_lines),
     )
+
     if confirmation != "search":
         show_notice("검색 취소", "검색하지 않고 메인 메뉴로 돌아갑니다.")
         return
@@ -569,6 +682,200 @@ def run_search_transactions(service: BudgetService) -> None:
             f"최신순 최대 {SEARCH_DISPLAY_LIMIT}건 표시 · "
             f"종류={type_value or '전체'} · 카테고리={category_value or '전체'}"
         ),
+    )
+
+
+def run_update_transaction(service: BudgetService) -> None:
+    """거래를 방향키로 고른 뒤 필요한 내용을 수정합니다.
+
+    화면에서 값을 바꾸는 동안에는 파일을 수정하지 않습니다.
+    마지막 확인에서 저장해야 기존 ``BudgetService.update_transaction()``을 호출합니다.
+    """
+
+    transaction = select_transaction(service, "수정할 거래를 선택하세요")
+
+    if transaction is None:
+        return
+
+    edited_date = transaction.date
+    edited_type = transaction.type
+    edited_category = transaction.category
+    edited_amount = str(transaction.amount)
+    edited_memo = transaction.memo
+    edited_tags = ",".join(transaction.tags)
+
+    while True:
+        draft_text = "\n".join(
+            (
+                f"ID         : {transaction.id}",
+                f"날짜       : {edited_date}",
+                f"종류       : {edited_type}",
+                f"카테고리   : {edited_category}",
+                f"금액       : {edited_amount}원",
+                f"메모       : {edited_memo or '(없음)'}",
+                f"태그       : {edited_tags or '(없음)'}",
+            )
+        )
+
+        field = choose_option(
+            "수정할 항목을 선택하세요",
+            (
+                Choice("날짜 수정", "date"),
+                Choice("종류 수정", "type"),
+                Choice("카테고리 수정", "category"),
+                Choice("금액 수정", "amount"),
+                Choice("메모 수정", "memo"),
+                Choice("태그 수정", "tags"),
+                Choice("변경 내용 저장", "save"),
+                Choice("수정 취소", "cancel"),
+            ),
+            description=draft_text,
+        )
+
+        if field is None or field == "cancel":
+            show_notice("거래 수정 취소", "변경 내용을 저장하지 않고 메인 메뉴로 돌아갑니다.")
+            return
+
+        if field == "date":
+            edited_date = ask_edit_text("날짜 수정", "새 날짜(YYYY-MM-DD)", edited_date)
+            continue
+
+        if field == "type":
+            new_type = choose_option(
+                "거래 종류 수정",
+                (Choice("지출 (expense)", "expense"), Choice("수입 (income)", "income")),
+                description=f"현재 값: {edited_type}",
+            )
+            if new_type is not None:
+                edited_type = new_type
+            continue
+
+        if field == "category":
+            new_category = choose_option(
+                "카테고리 수정",
+                tuple(Choice(name, name) for name in service.list_categories()),
+                description=f"현재 값: {edited_category}",
+            )
+            if new_category is not None:
+                edited_category = new_category
+            continue
+
+        if field == "amount":
+            edited_amount = ask_edit_text("금액 수정", "새 금액(0보다 큰 정수)", edited_amount)
+            continue
+
+        if field == "memo":
+            edited_memo = ask_edit_text(
+                "메모 수정",
+                "새 메모",
+                edited_memo,
+                allow_clear=True,
+            )
+            continue
+
+        if field == "tags":
+            edited_tags = ask_edit_text(
+                "태그 수정",
+                "새 태그(여러 개면 쉼표로 구분)",
+                edited_tags,
+                allow_clear=True,
+            )
+            continue
+
+        if field == "save":
+            break
+
+    final_text = "\n".join(
+        (
+            f"ID         : {transaction.id}",
+            f"날짜       : {edited_date}",
+            f"종류       : {edited_type}",
+            f"카테고리   : {edited_category}",
+            f"금액       : {edited_amount}원",
+            f"메모       : {edited_memo or '(없음)'}",
+            f"태그       : {edited_tags or '(없음)'}",
+        )
+    )
+
+    confirmation = choose_option(
+        "변경 내용을 저장할까요?",
+        (
+            Choice("취소 — 원래 거래 유지", "cancel"),
+            Choice("저장 — 변경 내용 적용", "save"),
+        ),
+        description=final_text,
+        initial_index=0,
+    )
+
+    if confirmation != "save":
+        show_notice("거래 수정 취소", "변경 내용을 저장하지 않았습니다.")
+        return
+
+    try:
+        updated = service.update_transaction(
+            transaction.id,
+            date=edited_date,
+            type=edited_type,
+            category=edited_category,
+            amount=edited_amount,
+            memo=edited_memo,
+            tags=edited_tags,
+        )
+    except AppError as error:
+        show_app_error(error)
+        return
+
+    show_notice(
+        "거래 수정 완료",
+        "변경 내용이 정상적으로 저장되었습니다.\n\n" + _transaction_details(updated),
+        color=Ansi.GREEN,
+    )
+
+
+def run_delete_transaction(service: BudgetService) -> None:
+    """거래를 방향키로 고른 뒤 확인을 거쳐 안전하게 삭제합니다.
+
+    삭제는 되돌리기 어려운 작업이므로 최종 확인 화면의 기본 선택을
+    반드시 '취소'로 둡니다. 사용자가 Enter를 실수로 눌러도 삭제되지 않습니다.
+    """
+
+    transaction = select_transaction(service, "삭제할 거래를 선택하세요")
+
+    if transaction is None:
+        return
+
+    confirmation = choose_option(
+        "정말 이 거래를 삭제할까요?",
+        (
+            Choice("취소 — 거래를 그대로 유지", "cancel"),
+            Choice("삭제 — 이 거래를 영구 삭제", "delete"),
+        ),
+        description=(
+            _transaction_details(transaction)
+            + "\n\n삭제 후에는 이 메뉴에서 자동으로 복구할 수 없습니다."
+        ),
+        initial_index=0,
+    )
+
+    if confirmation != "delete":
+        show_notice("거래 삭제 취소", "거래를 삭제하지 않았습니다.")
+        return
+
+    try:
+        service.delete_transaction(transaction.id)
+    except AppError as error:
+        show_app_error(error)
+        return
+
+    show_notice(
+        "거래 삭제 완료",
+        (
+            f"선택한 거래를 삭제했습니다.\n\n"
+            f"ID         : {transaction.id}\n"
+            f"날짜       : {transaction.date}\n"
+            f"금액       : {transaction.amount:,}원"
+        ),
+        color=Ansi.GREEN,
     )
 
 
@@ -608,11 +915,14 @@ def run_menu(data_dir: Path | None = None) -> int:
             if key == Key.UP:
                 selected_index = move_selection(selected_index, -1, len(MAIN_MENU_ITEMS))
                 continue
+
             if key == Key.DOWN:
                 selected_index = move_selection(selected_index, 1, len(MAIN_MENU_ITEMS))
                 continue
+
             if key in {Key.QUIT, Key.ESC}:
                 break
+
             if key not in {Key.RIGHT, Key.ENTER}:
                 continue
 
@@ -631,6 +941,12 @@ def run_menu(data_dir: Path | None = None) -> int:
                 continue
             if selected_item.action == "search":
                 run_search_transactions(service)
+                continue
+            if selected_item.action == "update":
+                run_update_transaction(service)
+                continue
+            if selected_item.action == "delete":
+                run_delete_transaction(service)
                 continue
 
             show_selected_item(selected_item)
