@@ -23,3 +23,9 @@ dist/
 
 # 실제 런타임 로그
 *.log
+
+# B2-1 로컬 실행 데이터
+# 프로그램을 실행하면 JSONL 파일이 만들어질 수 있지만,
+# Runtime 데이터는 소스 코드와 함께 커밋하지 않습니다.
+/data/
+training/round-01-clear/reference/data/
