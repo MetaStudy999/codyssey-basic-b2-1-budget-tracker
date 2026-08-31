@@ -2,6 +2,24 @@
 
 실제 Runtime을 하지 않은 항목은 Evidence 완료로 표시하지 않습니다.
 
+## 빠른 확인(Quick Read)
+
+```text
+공식 Requirement
+→ Reference Implementation
+→ 자동/실제 Verification
+→ 현재 Round 실제 Evidence
+→ Evaluation
+```
+
+## CLI 옵션 표기 판정
+
+공식 Mission 본문에는 일부 `-limit`, `-month`처럼 단일 하이픈으로 보이는 표기가 섞여 있으나, 실행/입력 방식의 구체 규칙과 반복 예시는 `--help`, `--limit`, `--from`, `--to`, `--month`처럼 **GNU-style 긴 옵션 `--`** 사용을 명시합니다. R01 Reference는 더 구체적이고 반복적으로 제시된 규칙을 따라 모든 long option을 `--`로 고정합니다.
+
+이 판정은 공식 요구를 변경하는 것이 아니라, 원본 내부 표기 차이를 실행 가능한 하나의 CLI 계약으로 고정한 것입니다.
+
+## Requirement Mapping
+
 | ID | Requirement | Reference Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | R01 | `python -m budget_app` CLI + `--help` | `reference/budget_app/cli.py`, `__main__.py` | 각 command `--help` | help 출력 |
@@ -36,3 +54,7 @@ Reference unit test가 통과하더라도 최종 CLEAR 전에 다음은 실제 �
 - 프로그램 재실행 후 persistence
 - import/export 실제 CSV
 - `--data-dir` 분리 실행
+
+---
+
+[← Beginner Guide](../BEGINNER-GUIDE.md) · [Evaluation Q&A](evaluation-qa.md) · [Evidence Guide](../evidence/README.md)

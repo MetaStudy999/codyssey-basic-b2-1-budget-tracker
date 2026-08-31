@@ -6,8 +6,9 @@
 
 - Training Round: **R01 — CLEAR**
 - Mission: **B2-1**
-- Runtime Mission 상태: **⬜ NOT STARTED**
+- Runtime Mission 상태: **🟡 ACTIVE — MAC-V Runtime 기능 PASS / 최신 주석 반영 HEAD 재검증 필요**
 - Phase A Reference 상태: **CORE READY**
+- Actual Evidence: [`evidence/2026-08-31-mac-v-runtime.md`](evidence/2026-08-31-mac-v-runtime.md)
 
 ## A. Source / Scope
 
@@ -29,6 +30,7 @@
 - [x] 공통 오류 decorator 실제 적용
 - [x] `REFERENCE-STATUS.md`
 - [x] Phase A 자체감사 BLOCKER/MAJOR 0
+- [x] 입문자가 코드 흐름을 따라갈 수 있는 상세 한글 주석/docstring
 
 ## C. 저장 정책
 
@@ -43,7 +45,7 @@
 - [x] update/delete same-directory temp + `fsync` + `os.replace()`
 - [x] 테스트에서 transactions/categories/budgets 재오픈 persistence 확인
 - [x] update/delete 후 temp 잔존 없음 + 재오픈 상태 확인
-- [ ] Phase C 실제 프로그램 재실행 후 3파일 persistence Evidence
+- [x] Phase C 실제 프로그램 재실행 후 3파일 persistence Evidence
 
 ## D. add / list
 
@@ -58,7 +60,7 @@
 - [x] `--limit`
 - [x] reverse JSONL generator streaming
 - [x] 테스트에서 list 반환이 실제 generator인지 확인
-- [ ] Phase C 실제 add/list CLI
+- [x] Phase C 실제 add/list CLI
 
 ## E. search
 
@@ -71,7 +73,7 @@
 - [x] 최신순
 - [x] generator streaming
 - [x] 테스트에서 5종 조건 조합과 generator 계약 확인
-- [ ] Phase C 실제 대표 검색
+- [x] Phase C 실제 대표 검색
 
 ## F. update / delete
 
@@ -83,7 +85,7 @@
 - [x] 없는 ID 오류
 - [x] atomic rewrite
 - [x] 재오픈 후 update/delete 결과 유지 테스트
-- [ ] Phase C 정상/오류 CLI
+- [x] Phase C 정상/오류 CLI
 
 ## G. summary / budget
 
@@ -97,14 +99,14 @@
 - [x] 예산 사용률
 - [x] 예산 초과 Warning
 - [x] 단위테스트로 합계/순위/120% 초과/빈 달 확인
-- [ ] Phase C 실제 CLI
+- [x] Phase C 실제 CLI
 
 ## H. category
 
 - [x] add/list/remove
 - [x] 사용 중 category 삭제 차단
 - [x] category 재오픈 persistence 테스트
-- [ ] Phase C 실제 CLI
+- [x] Phase C 실제 CLI
 
 ## I. import / export
 
@@ -117,7 +119,7 @@
 - [x] UTF-8 + 헤더
 - [x] 깨진 행 부분 성공 + skipped/row reason
 - [x] date-range export 테스트
-- [ ] Phase C 실제 CSV 파일/처리건수 Evidence
+- [x] Phase C 실제 CSV 파일/처리건수 Evidence
 
 ## J. 오류 / CLI 계약
 
@@ -128,7 +130,9 @@
 - [x] 정상 main return 0
 - [x] AppError return 2 / argparse nonzero
 - [x] invalid date/type/category/0·음수 amount 테스트
-- [ ] Phase C 실제 오류 exit code Evidence
+- [x] Phase C 실제 오류 exit code Evidence
+
+> Runtime 관찰: `search --type invalid`은 argparse native validation이 처리해 usage + 허용값 + exit 2를 출력합니다. no traceback/nonzero 조건은 PASS이며, `[오류]/[힌트]` 형식과 다른 점은 MINOR UX 일관성 사항으로 기록합니다.
 
 ## K. Generator / Decorator / Type Hint
 
@@ -137,6 +141,7 @@
 - [x] `handle_cli_errors` decorator 분리 및 실제 `main` 적용
 - [x] dataclass/Repository/Service/CLI 함수에 type hints
 - [x] Evaluation 설명 기준 답안
+- [x] generator/decorator/atomic rewrite 등에 입문자용 상세 코드 설명 추가
 - [ ] Phase C에서 사용자가 실제 코드 위치를 근거로 자기 말 설명
 
 ## L. Verify / Documentation / Evidence
@@ -150,11 +155,13 @@
 - [x] `evidence/README.md`
 - [x] `environment/verify.sh`를 AST parse + unit tests + CLI/help + README/구조 검사로 보강
 - [x] verify가 bytecode/cache를 남기지 않도록 설계
-- [ ] 실제 환경에서 `verify.sh` 0 FAIL
-- [ ] 실제 정상 CLI Evidence
-- [ ] 실제 오류 CLI Evidence
-- [ ] 실제 persistence Evidence
-- [ ] 실제 import/export Evidence
+- [x] **입문자 주석 반영 전** 실제 환경 `verify.sh` — 46 PASS / 0 FAIL
+- [x] 실제 정상 CLI Evidence
+- [x] 실제 오류 CLI Evidence
+- [x] 실제 persistence Evidence
+- [x] 실제 import/export Evidence
+- [x] 입문자 Python 코드 주석/docstring 반영
+- [ ] **최신 주석 반영 HEAD에서 `verify.sh` 0 FAIL 재확인**
 
 ## M. Evaluation 확장성
 
@@ -167,10 +174,10 @@
 
 - [ ] 공식 Mission 누락 없음 최종 확인
 - [ ] 공식 Evaluation 누락 없음 최종 확인
-- [ ] 실제 Reference verify/test PASS
-- [ ] 정상 Runtime 완료
-- [ ] 오류 Runtime 완료
-- [ ] 실제 재실행 persistence 확인
-- [ ] 필요한 Evidence 완료
+- [ ] **최신 HEAD Reference verify/test PASS**
+- [x] 정상 Runtime 완료
+- [x] 오류 Runtime 완료
+- [x] 실제 재실행 persistence 확인
+- [x] 필요한 Runtime Evidence 완료
 - [ ] 설명형 평가 대응 가능
 - [ ] **✅ B2-1 CLEAR**
