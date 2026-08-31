@@ -6,12 +6,13 @@
 메뉴 코드가 ``\033[...`` 같은 제어문자나 운영체제별 키 입력 방식을
 직접 알 필요가 없도록 분리하는 것이 목적입니다.
 
-입문자는 우선 다음 네 함수의 역할만 이해하면 충분합니다.
+입문자는 우선 다음 함수의 역할만 이해하면 충분합니다.
 
 - ``clear_screen()``: 화면을 깨끗하게 지웁니다.
 - ``paint()``: 글자에 색상이나 강조 효과를 붙입니다.
 - ``read_key()``: 방향키/Enter/Esc/Q 같은 키를 읽습니다.
 - ``hidden_cursor()``: 메뉴를 그리는 동안 커서를 잠시 숨깁니다.
+- ``visible_cursor()``: 글자를 입력할 때 커서를 잠시 다시 보여 줍니다.
 
 외부 패키지는 사용하지 않으며 Python 표준 라이브러리만 사용합니다.
 """
@@ -222,3 +223,24 @@ def hidden_cursor() -> Iterator[None]:
         yield
     finally:
         print("\033[?25h", end="", flush=True)
+
+
+@contextmanager
+def visible_cursor() -> Iterator[None]:
+    """텍스트를 입력하는 동안 터미널 커서를 잠시 다시 보여 줍니다.
+
+    메인 메뉴는 화면을 깔끔하게 보이게 하려고 커서를 숨기지만,
+    날짜·금액·메모처럼 글자를 입력할 때는 현재 입력 위치를 확인할 수 있어야 합니다.
+
+    이 컨텍스트를 빠져나오면 다시 커서를 숨겨 메뉴 화면의 모양을 유지합니다.
+    """
+
+    if not supports_color():
+        yield
+        return
+
+    print("\033[?25h", end="", flush=True)
+    try:
+        yield
+    finally:
+        print("\033[?25l", end="", flush=True)
