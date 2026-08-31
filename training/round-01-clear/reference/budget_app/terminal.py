@@ -57,13 +57,21 @@ class Ansi:
     REVERSE = "\033[7m"
 
 
-# 방향키는 내부적으로 ESC 문자 뒤에 추가 문자가 이어지는 형태입니다.
-# 이 값은 사용자가 외울 필요가 없으므로 이 파일 안에서만 관리합니다.
+# Linux/macOS 방향키는 터미널에 따라 두 가지 대표 형식으로 전달될 수 있습니다.
+#
+#   ESC [ A   : 일반적인 CSI 형식
+#   ESC O A   : 일부 터미널의 SS3 형식
+#
+# 메뉴 코드에서는 이런 차이를 알 필요가 없도록 모두 Key.UP 같은 값으로 바꿉니다.
 _POSIX_ARROW_KEYS = {
     "\x1b[A": Key.UP,
     "\x1b[B": Key.DOWN,
     "\x1b[C": Key.RIGHT,
     "\x1b[D": Key.LEFT,
+    "\x1bOA": Key.UP,
+    "\x1bOB": Key.DOWN,
+    "\x1bOC": Key.RIGHT,
+    "\x1bOD": Key.LEFT,
 }
 
 _WINDOWS_ARROW_KEYS = {
@@ -72,6 +80,12 @@ _WINDOWS_ARROW_KEYS = {
     "M": Key.RIGHT,
     "K": Key.LEFT,
 }
+
+
+# 방향키는 ESC 문자 하나가 아니라 여러 문자가 연속해서 들어옵니다.
+# VS Code 터미널, SSH, WSL, 가상환경에서는 문자 사이에 아주 짧은 지연이 생길 수 있습니다.
+# 0.20초 정도 기다리면 Esc 단독 입력과 방향키 입력을 안정적으로 구분할 수 있습니다.
+_POSIX_ESCAPE_TIMEOUT_SECONDS = 0.20
 
 
 def is_interactive_terminal() -> bool:
@@ -149,6 +163,16 @@ def _read_windows_key() -> str:
     return first
 
 
+def _has_pending_input(timeout: float) -> bool:
+    """지정한 시간 안에 다음 키 입력 문자가 도착하는지 확인합니다.
+
+    방향키의 첫 문자는 Esc와 같기 때문에 바로 종료로 판단하면 안 됩니다.
+    잠깐 기다린 뒤 이어지는 문자가 있으면 방향키 시퀀스로 처리합니다.
+    """
+
+    return bool(select.select([sys.stdin], [], [], timeout)[0])
+
+
 def _read_posix_key() -> str:
     """Linux/macOS 터미널에서 키 하나를 읽습니다."""
 
@@ -170,20 +194,27 @@ def _read_posix_key() -> str:
         if first.lower() == "q":
             return Key.QUIT
 
+        # Esc가 아닌 일반 문자는 그대로 반환합니다.
         if first != "\x1b":
             return first
 
-        # Esc를 단독으로 누른 경우와 방향키의 시작 문자를 구분합니다.
-        # 아주 짧게 다음 문자가 오는지 확인하면 Esc 단독 입력도 멈춤 없이 처리할 수 있습니다.
-        if not select.select([sys.stdin], [], [], 0.03)[0]:
+        # 여기부터는 Esc 단독 입력인지 방향키의 시작인지 구분합니다.
+        # 방향키라면 ESC 뒤에 '[' 또는 'O', 그리고 A/B/C/D가 차례로 들어옵니다.
+        if not _has_pending_input(_POSIX_ESCAPE_TIMEOUT_SECONDS):
             return Key.ESC
 
         second = sys.stdin.read(1)
-        if not select.select([sys.stdin], [], [], 0.03)[0]:
-            return Key.ESC
+
+        # '[' 또는 'O'가 아니면 우리가 지원하는 방향키 형식이 아닙니다.
+        if second not in {"[", "O"}:
+            return Key.UNKNOWN
+
+        if not _has_pending_input(_POSIX_ESCAPE_TIMEOUT_SECONDS):
+            return Key.UNKNOWN
 
         third = sys.stdin.read(1)
-        return _POSIX_ARROW_KEYS.get(first + second + third, Key.UNKNOWN)
+        sequence = first + second + third
+        return _POSIX_ARROW_KEYS.get(sequence, Key.UNKNOWN)
     finally:
         # 프로그램이 중간에 오류가 나더라도 원래 터미널 입력 상태를 반드시 복원합니다.
         termios.tcsetattr(file_descriptor, termios.TCSADRAIN, original_settings)
