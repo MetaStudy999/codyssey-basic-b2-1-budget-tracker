@@ -1,0 +1,9 @@
+schema_version: 1
+current_mission_id: B2-1
+previous_mission_ids:
+  - B2-1
+stable_topic_id: budget-tracker
+official_title_ko: "나만의 용돈 기입장 프로그램 만들기"
+repository: MetaStudy999/codyssey-basic-budget-tracker
+control_tower_map: https://github.com/MetaStudy999/codyssey-basic/blob/main/CURRENT-MISSION-MAP.md
+numbering_updated_at: "2026-09-03"
